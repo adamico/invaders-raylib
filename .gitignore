@@ -412,3 +412,4 @@ compile_commands.json
 build/external/
 *.gdoc
 
+.DS_Store
