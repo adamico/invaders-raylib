@@ -409,4 +409,6 @@ Makefile
 # IDE and build generated files
 compile_commands.json
 .clangd
+build/external/
+*.gdoc
 
