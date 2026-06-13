@@ -405,3 +405,8 @@ Makefile
 *.swp
 *.swo
 *.swn
+
+# IDE and build generated files
+compile_commands.json
+.clangd
+
