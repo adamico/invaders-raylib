@@ -54,6 +54,10 @@ void UpdatePlayer(Player *player, float dt) {
       Clamp(player->pos.y, player->radius, windowSize.y - player->radius);
 };
 
+void DrawPlayer(Player *player) {
+    DrawCircleV(player->pos, player->radius, player->color);
+};
+
 // Main function
 int main() {
   // Tell the window to use vsync and work on high DPI displays
@@ -92,8 +96,7 @@ int main() {
         TextFormat("Screen Size %ix%i", GetScreenWidth(), GetScreenHeight());
     CenterText(screenSizeText, 220, font_size, WHITE);
 
-    // draw player
-    DrawCircleV(player.pos, player.radius, player.color);
+    DrawPlayer(&player);
 
     // draw debug
     DrawText(TextFormat("Player Position: %i/%i", (int)player.pos.x,
