@@ -14,6 +14,9 @@ https://creativecommons.org/publicdomain/zero/1.0/
 
 #include "resource_dir.h" // utility header for SearchAndSetResourceDir
 #define MAX_PROJECTILES 100
+#define FOR_EACH_PROJECTILE(projectile_ptr, projectile_array)                  \
+  for (Projectile *projectile_ptr = bullets;                                   \
+       projectile_ptr < bullets + MAX_PROJECTILES; projectile_ptr++)
 
 const Vector2 windowSize = {1280, 720};
 
@@ -66,8 +69,7 @@ void PlayerShoot(Player *player, Projectile *bullets) {
   if (!IsKeyPressed(KEY_SPACE))
     return;
 
-  for (int bulletIndex = 0; bulletIndex < MAX_PROJECTILES; bulletIndex++) {
-    Projectile *bullet = &bullets[bulletIndex];
+  FOR_EACH_PROJECTILE(bullet, bullets) {
     if (bullet->active)
       continue;
 
@@ -80,8 +82,7 @@ void PlayerShoot(Player *player, Projectile *bullets) {
 }
 
 void UpdateProjectiles(Projectile *bullets, float dt) {
-  for (int bulletIndex = 0; bulletIndex < MAX_PROJECTILES; bulletIndex++) {
-    Projectile *bullet = &bullets[bulletIndex];
+  FOR_EACH_PROJECTILE(bullet, bullets) {
     if (!bullet->active)
       continue;
     bullet->pos =
@@ -91,8 +92,7 @@ void UpdateProjectiles(Projectile *bullets, float dt) {
 }
 
 void DrawProjectiles(Projectile *bullets) {
-  for (int bulletIndex = 0; bulletIndex < MAX_PROJECTILES; bulletIndex++) {
-    Projectile *bullet = &bullets[bulletIndex];
+  FOR_EACH_PROJECTILE(bullet, bullets) {
     if (bullet->active) {
       DrawCircleV(bullet->pos, bullet->radius, RED);
     }
@@ -160,6 +160,12 @@ int main() {
         TextFormat("Player Direction: %.2f/%.2f", player.dir.x, player.dir.y),
         20, 40, 20, RED);
 
+    FOR_EACH_PROJECTILE(bullet, bullets) {
+      if (bullet->active)
+        DrawText(TextFormat("Bullet Position: %i/%i", (int)bullet->pos.x,
+                            (int)bullet->pos.y),
+                 20, 60, 20, RED);
+    }
     // end the frame and get ready for the next one  (display frame, poll
     // input, etc...)
     EndDrawing();
