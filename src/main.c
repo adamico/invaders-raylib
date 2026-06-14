@@ -63,31 +63,30 @@ typedef struct Projectile {
 } Projectile;
 
 void PlayerShoot(Player *player, Projectile *bullets) {
-  if (IsKeyPressed(KEY_SPACE)) {
-    for (int bulletIndex = 0; bulletIndex < MAX_PROJECTILES; bulletIndex++) {
-      Projectile *bullet = &bullets[bulletIndex];
+  if (!IsKeyPressed(KEY_SPACE))
+    return;
 
-      if (!bullet->active) {
-        bullet->active = true;
-        bullet->pos = player->pos;
-        bullet->dir = (Vector2){0.0f, -1.0f};
-        bullet->speed = 500.0f;
-        bullet->radius = 5.0f;
-        break;
-      }
-    }
+  for (int bulletIndex = 0; bulletIndex < MAX_PROJECTILES; bulletIndex++) {
+    Projectile *bullet = &bullets[bulletIndex];
+    if (bullet->active)
+      continue;
+
+    bullet->active = true;
+    bullet->pos = player->pos;
+    bullet->dir = (Vector2){0.0f, -1.0f};
+    bullet->speed = 500.0f;
+    bullet->radius = 5.0f;
   }
 }
 
 void UpdateProjectiles(Projectile *bullets, float dt) {
   for (int bulletIndex = 0; bulletIndex < MAX_PROJECTILES; bulletIndex++) {
     Projectile *bullet = &bullets[bulletIndex];
-    if (bullet->active) {
-      bullet->pos = Vector2Add(bullet->pos,
-                               Vector2Scale(bullet->dir, bullet->speed * dt));
-      if (bullet->pos.y < 0)
-        bullet->active = false;
-    }
+    if (!bullet->active)
+      continue;
+    bullet->pos =
+        Vector2Add(bullet->pos, Vector2Scale(bullet->dir, bullet->speed * dt));
+    bullet->active = bullet->pos.y > 0;
   }
 }
 
