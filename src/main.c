@@ -62,7 +62,7 @@ typedef struct Projectile {
   bool active;
 } Projectile;
 
-void PlayerShoot(Player *player, Projectile bullets[]) {
+void PlayerShoot(Player *player, Projectile *bullets) {
   if (IsKeyPressed(KEY_SPACE)) {
     for (int bulletIndex = 0; bulletIndex < MAX_PROJECTILES; bulletIndex++) {
       Projectile *bullet = &bullets[bulletIndex];
@@ -79,7 +79,7 @@ void PlayerShoot(Player *player, Projectile bullets[]) {
   }
 }
 
-void UpdateProjectiles(Projectile bullets[], float dt) {
+void UpdateProjectiles(Projectile *bullets, float dt) {
   for (int bulletIndex = 0; bulletIndex < MAX_PROJECTILES; bulletIndex++) {
     Projectile *bullet = &bullets[bulletIndex];
     if (bullet->active) {
@@ -91,7 +91,7 @@ void UpdateProjectiles(Projectile bullets[], float dt) {
   }
 }
 
-void DrawProjectiles(Projectile bullets[]) {
+void DrawProjectiles(Projectile *bullets) {
   for (int bulletIndex = 0; bulletIndex < MAX_PROJECTILES; bulletIndex++) {
     Projectile *bullet = &bullets[bulletIndex];
     if (bullet->active) {
