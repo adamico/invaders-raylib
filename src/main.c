@@ -14,11 +14,22 @@ https://creativecommons.org/publicdomain/zero/1.0/
 
 #include "resource_dir.h" // utility header for SearchAndSetResourceDir
 #define MAX_PROJECTILES 100
-#define FOR_EACH_PROJECTILE(projectile_ptr, projectile_array)                  \
-  for (Projectile *projectile_ptr = bullets;                                   \
-       projectile_ptr < bullets + MAX_PROJECTILES; projectile_ptr++)
+#define MAX_ENEMIES 44
+#define MAX_ENEMIES_PER_ROW 11
+#define COL_PADDING 80
+#define ROW_PADDING 60
+
+#define FOR_EACH_PROJECTILE(projectilePtr, projectileArray)                    \
+  for (Projectile *projectilePtr = projectileArray;                            \
+       projectilePtr < projectileArray + MAX_PROJECTILES; projectilePtr++)
+
+#define FOR_EACH_ENEMY(enemyPtr, enemyArray)                                   \
+  for (Enemy *enemyPtr = enemyArray; enemyPtr < enemyArray + MAX_ENEMIES;      \
+       enemyPtr++)
 
 const Vector2 windowSize = {1280, 720};
+const Vector2 startGridPos = {
+    ((windowSize.x - (MAX_ENEMIES_PER_ROW * COL_PADDING)) / 2) + (COL_PADDING / 2.0), 100};
 
 // Player definition
 typedef struct Player {
@@ -78,6 +89,7 @@ void PlayerShoot(Player *player, Projectile *bullets) {
     bullet->dir = (Vector2){0.0f, -1.0f};
     bullet->speed = 500.0f;
     bullet->radius = 5.0f;
+    break;
   }
 }
 
@@ -95,6 +107,56 @@ void DrawProjectiles(Projectile *bullets) {
   FOR_EACH_PROJECTILE(bullet, bullets) {
     if (bullet->active) {
       DrawCircleV(bullet->pos, bullet->radius, RED);
+    }
+  }
+}
+
+// Enemies
+typedef struct Enemy {
+  Vector2 pos;
+  float radius;
+  bool active;
+  Color color;
+} Enemy;
+
+// Collision
+
+void InitEnemies(Enemy *enemies) {
+  for (int enemyIndex = 0; enemyIndex < MAX_ENEMIES; enemyIndex++) {
+    int column = enemyIndex % MAX_ENEMIES_PER_ROW;
+    int row = enemyIndex / MAX_ENEMIES_PER_ROW;
+    int offsetX = startGridPos.x;
+    int offsetY = startGridPos.y;
+    Enemy enemy = {.pos = (Vector2){offsetX + (column * COL_PADDING),
+                                    offsetY + (row * ROW_PADDING)},
+                   .radius = 20,
+                   .active = true,
+                   .color = BLUE};
+    enemies[enemyIndex] = enemy;
+  }
+}
+
+void DrawEnemies(Enemy *enemies) {
+  FOR_EACH_ENEMY(enemy, enemies) {
+    if (enemy->active)
+      DrawCircleV(enemy->pos, enemy->radius, enemy->color);
+  }
+}
+
+void CheckBulletEnemyCollisions(Projectile *bullets, Enemy *enemies) {
+  FOR_EACH_PROJECTILE(bullet, bullets) {
+    if (!bullet->active)
+      continue;
+
+    FOR_EACH_ENEMY(enemy, enemies) {
+      if (!enemy->active)
+        continue;
+
+      if (CheckCollisionCircles(bullet->pos, bullet->radius, enemy->pos,
+                                enemy->radius)) {
+        bullet->active = false;
+        enemy->active = false;
+      }
     }
   }
 }
@@ -119,6 +181,8 @@ int main() {
   SearchAndSetResourceDir("resources");
 
   Projectile bullets[MAX_PROJECTILES] = {0};
+  Enemy enemies[MAX_ENEMIES] = {0};
+  InitEnemies(enemies);
 
   Player player = {.pos = {windowSize.x / 2, windowSize.y / 2},
                    .radius = 25.0f,
@@ -135,8 +199,8 @@ int main() {
     UpdatePlayer(&player, dt);
 
     PlayerShoot(&player, bullets);
+    CheckBulletEnemyCollisions(bullets, enemies);
     UpdateProjectiles(bullets, dt);
-
     // draw
     BeginDrawing();
 
@@ -144,28 +208,19 @@ int main() {
     ClearBackground(BLACK);
 
     int font_size = 20;
-    CenterText("Hello Raylib, wassup?", 100, font_size, WHITE);
-    const char *screenSizeText =
-        TextFormat("Screen Size %ix%i", GetScreenWidth(), GetScreenHeight());
-    CenterText(screenSizeText, 220, font_size, WHITE);
 
     DrawPlayer(&player);
+    DrawEnemies(enemies);
     DrawProjectiles(bullets);
 
     // draw debug
     DrawText(TextFormat("Player Position: %i/%i", (int)player.pos.x,
                         (int)player.pos.y),
-             20, 20, 20, RED);
+             20, 20, font_size, RED);
     DrawText(
         TextFormat("Player Direction: %.2f/%.2f", player.dir.x, player.dir.y),
-        20, 40, 20, RED);
+        20, 40, font_size, RED);
 
-    FOR_EACH_PROJECTILE(bullet, bullets) {
-      if (bullet->active)
-        DrawText(TextFormat("Bullet Position: %i/%i", (int)bullet->pos.x,
-                            (int)bullet->pos.y),
-                 20, 60, 20, RED);
-    }
     // end the frame and get ready for the next one  (display frame, poll
     // input, etc...)
     EndDrawing();
