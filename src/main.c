@@ -29,7 +29,9 @@ https://creativecommons.org/publicdomain/zero/1.0/
 
 const Vector2 windowSize = {1280, 720};
 const Vector2 startGridPos = {
-    ((windowSize.x - (MAX_ENEMIES_PER_ROW * COL_PADDING)) / 2) + (COL_PADDING / 2.0), 100};
+    ((windowSize.x - (MAX_ENEMIES_PER_ROW * COL_PADDING)) / 2) +
+        (COL_PADDING / 2.0),
+    100};
 
 // Player definition
 typedef struct Player {
@@ -40,12 +42,43 @@ typedef struct Player {
   Vector2 dir;
 } Player;
 
-void UpdatePlayer(Player *player, float dt) {
-  float radius = player->radius;
-  float speed = player->speed;
-  player->dir = Vector2Zero();
-  Vector2 *playerPos = &player->pos;
-  Vector2 *playerDir = &player->dir;
+// Bullet
+typedef struct Projectile {
+  Vector2 pos;
+  Vector2 dir;
+  float speed;
+  float radius;
+  bool active;
+} Projectile;
+
+// Enemies
+typedef struct Enemy {
+  Vector2 pos;
+  float radius;
+  bool active;
+  Color color;
+} Enemy;
+
+typedef struct GameState {
+  Player player;
+  Projectile bullets[MAX_PROJECTILES];
+  Enemy enemies[MAX_ENEMIES];
+} GameState;
+
+void InitPlayer(GameState *state) {
+  state->player = (Player){.pos = {windowSize.x / 2, windowSize.y / 2},
+                          .radius = 25.0f,
+                          .color = GREEN,
+                          .speed = 300.0f,
+                          .dir = {0.0f, 0.0f}};
+}
+
+void UpdatePlayer(GameState *state, float dt) {
+  float radius = state->player.radius;
+  float speed = state->player.speed;
+  state->player.dir = Vector2Zero();
+  Vector2 *playerPos = &state->player.pos;
+  Vector2 *playerDir = &state->player.dir;
 
   if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A))
     playerDir->x -= 1.0f;
@@ -63,29 +96,20 @@ void UpdatePlayer(Player *player, float dt) {
                    (Vector2){windowSize.x - radius, windowSize.y - radius});
 };
 
-void DrawPlayer(Player *player) {
-  DrawCircleV(player->pos, player->radius, player->color);
+void DrawPlayer(GameState *state) {
+  DrawCircleV(state->player.pos, state->player.radius, state->player.color);
 };
 
-// Bullet
-typedef struct Projectile {
-  Vector2 pos;
-  Vector2 dir;
-  float speed;
-  float radius;
-  bool active;
-} Projectile;
-
-void PlayerShoot(Player *player, Projectile *bullets) {
+void PlayerShoot(GameState *state) {
   if (!IsKeyPressed(KEY_SPACE))
     return;
 
-  FOR_EACH_PROJECTILE(bullet, bullets) {
+  FOR_EACH_PROJECTILE(bullet, state->bullets) {
     if (bullet->active)
       continue;
 
     bullet->active = true;
-    bullet->pos = player->pos;
+    bullet->pos = state->player.pos;
     bullet->dir = (Vector2){0.0f, -1.0f};
     bullet->speed = 500.0f;
     bullet->radius = 5.0f;
@@ -93,8 +117,8 @@ void PlayerShoot(Player *player, Projectile *bullets) {
   }
 }
 
-void UpdateProjectiles(Projectile *bullets, float dt) {
-  FOR_EACH_PROJECTILE(bullet, bullets) {
+void UpdateProjectiles(GameState *state, float dt) {
+  FOR_EACH_PROJECTILE(bullet, state->bullets) {
     if (!bullet->active)
       continue;
     bullet->pos =
@@ -103,25 +127,15 @@ void UpdateProjectiles(Projectile *bullets, float dt) {
   }
 }
 
-void DrawProjectiles(Projectile *bullets) {
-  FOR_EACH_PROJECTILE(bullet, bullets) {
+void DrawProjectiles(GameState *state) {
+  FOR_EACH_PROJECTILE(bullet, state->bullets) {
     if (bullet->active) {
       DrawCircleV(bullet->pos, bullet->radius, RED);
     }
   }
 }
 
-// Enemies
-typedef struct Enemy {
-  Vector2 pos;
-  float radius;
-  bool active;
-  Color color;
-} Enemy;
-
-// Collision
-
-void InitEnemies(Enemy *enemies) {
+void InitEnemies(GameState *state) {
   for (int enemyIndex = 0; enemyIndex < MAX_ENEMIES; enemyIndex++) {
     int column = enemyIndex % MAX_ENEMIES_PER_ROW;
     int row = enemyIndex / MAX_ENEMIES_PER_ROW;
@@ -132,23 +146,23 @@ void InitEnemies(Enemy *enemies) {
                    .radius = 20,
                    .active = true,
                    .color = BLUE};
-    enemies[enemyIndex] = enemy;
+    state->enemies[enemyIndex] = enemy;
   }
 }
 
-void DrawEnemies(Enemy *enemies) {
-  FOR_EACH_ENEMY(enemy, enemies) {
+void DrawEnemies(GameState *state) {
+  FOR_EACH_ENEMY(enemy, state->enemies) {
     if (enemy->active)
       DrawCircleV(enemy->pos, enemy->radius, enemy->color);
   }
 }
 
-void CheckBulletEnemyCollisions(Projectile *bullets, Enemy *enemies) {
-  FOR_EACH_PROJECTILE(bullet, bullets) {
+void CheckBulletEnemyCollisions(GameState *state) {
+  FOR_EACH_PROJECTILE(bullet, state->bullets) {
     if (!bullet->active)
       continue;
 
-    FOR_EACH_ENEMY(enemy, enemies) {
+    FOR_EACH_ENEMY(enemy, state->enemies) {
       if (!enemy->active)
         continue;
 
@@ -168,6 +182,44 @@ void CenterText(const char *text, int yPos, int fontSize, Color textColor) {
            textColor);
 }
 
+void InitGame(GameState *state) {
+  *state = (GameState){0};
+  InitPlayer(state);
+  InitEnemies(state);
+}
+
+void UpdateGame(GameState *state, float dt) {
+  UpdatePlayer(state, dt);
+  PlayerShoot(state);
+  CheckBulletEnemyCollisions(state);
+  UpdateProjectiles(state, dt);
+}
+
+void DrawGame(GameState *state) {
+  BeginDrawing();
+
+  // Setup the back buffer for drawing (clear color and depth buffers)
+  ClearBackground(BLACK);
+
+  int font_size = 20;
+
+  DrawPlayer(state);
+  DrawEnemies(state);
+  DrawProjectiles(state);
+
+  // draw debug
+  DrawText(TextFormat("Player Position: %i/%i", (int)state->player.pos.x,
+                      (int)state->player.pos.y),
+           20, 20, font_size, RED);
+  DrawText(
+      TextFormat("Player Direction: %.2f/%.2f", state->player.dir.x, state->player.dir.y),
+      20, 40, font_size, RED);
+
+  // end the frame and get ready for the next one  (display frame, poll
+  // input, etc...)
+  EndDrawing();
+}
+
 // Main function
 int main() {
   // Tell the window to use vsync and work on high DPI displays
@@ -180,53 +232,14 @@ int main() {
   // it as the current working directory so we can load from it
   SearchAndSetResourceDir("resources");
 
-  Projectile bullets[MAX_PROJECTILES] = {0};
-  Enemy enemies[MAX_ENEMIES] = {0};
-  InitEnemies(enemies);
+  GameState state = {0};
+  InitGame(&state);
 
-  Player player = {.pos = {windowSize.x / 2, windowSize.y / 2},
-                   .radius = 25.0f,
-                   .color = GREEN,
-                   .speed = 300.0f,
-                   .dir = {0.0f, 0.0f}};
-
-  // game loop
-  // run the loop until the user presses ESCAPE or presses the Close button on
-  // the window
   while (!WindowShouldClose()) {
-    // update
     float dt = GetFrameTime();
-    UpdatePlayer(&player, dt);
-
-    PlayerShoot(&player, bullets);
-    CheckBulletEnemyCollisions(bullets, enemies);
-    UpdateProjectiles(bullets, dt);
-    // draw
-    BeginDrawing();
-
-    // Setup the back buffer for drawing (clear color and depth buffers)
-    ClearBackground(BLACK);
-
-    int font_size = 20;
-
-    DrawPlayer(&player);
-    DrawEnemies(enemies);
-    DrawProjectiles(bullets);
-
-    // draw debug
-    DrawText(TextFormat("Player Position: %i/%i", (int)player.pos.x,
-                        (int)player.pos.y),
-             20, 20, font_size, RED);
-    DrawText(
-        TextFormat("Player Direction: %.2f/%.2f", player.dir.x, player.dir.y),
-        20, 40, font_size, RED);
-
-    // end the frame and get ready for the next one  (display frame, poll
-    // input, etc...)
-    EndDrawing();
+    UpdateGame(&state, dt);
+    DrawGame(&state);
   }
-
-  // cleanup
 
   // destroy the window and cleanup the OpenGL context
   CloseWindow();
