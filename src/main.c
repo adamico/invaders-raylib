@@ -13,6 +13,7 @@ https://creativecommons.org/publicdomain/zero/1.0/
 #include <stdio.h>
 
 #include "resource_dir.h" // utility header for SearchAndSetResourceDir
+#define MAX_PROJECTILES 100
 
 const Vector2 windowSize = {1280, 720};
 
@@ -25,38 +26,86 @@ typedef struct Player {
   Vector2 dir;
 } Player;
 
+void UpdatePlayer(Player *player, float dt) {
+  float radius = player->radius;
+  float speed = player->speed;
+  player->dir = Vector2Zero();
+  Vector2 *playerPos = &player->pos;
+  Vector2 *playerDir = &player->dir;
+
+  if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A))
+    playerDir->x -= 1.0f;
+  if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D))
+    playerDir->x += 1.0f;
+  if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W))
+    playerDir->y -= 1.0f;
+  if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S))
+    playerDir->y += 1.0f;
+
+  *playerDir = Vector2Normalize(*playerDir);
+  *playerPos = Vector2Add(*playerPos, Vector2Scale(*playerDir, speed * dt));
+  *playerPos =
+      Vector2Clamp(*playerPos, (Vector2){radius, radius},
+                   (Vector2){windowSize.x - radius, windowSize.y - radius});
+};
+
+void DrawPlayer(Player *player) {
+  DrawCircleV(player->pos, player->radius, player->color);
+};
+
+// Bullet
+typedef struct Projectile {
+  Vector2 pos;
+  Vector2 dir;
+  float speed;
+  float radius;
+  bool active;
+} Projectile;
+
+void PlayerShoot(Player *player, Projectile bullets[]) {
+  if (IsKeyPressed(KEY_SPACE)) {
+    for (int bulletIndex = 0; bulletIndex < MAX_PROJECTILES; bulletIndex++) {
+      Projectile *bullet = &bullets[bulletIndex];
+
+      if (!bullet->active) {
+        bullet->active = true;
+        bullet->pos = player->pos;
+        bullet->dir = (Vector2){0.0f, -1.0f};
+        bullet->speed = 500.0f;
+        bullet->radius = 5.0f;
+        break;
+      }
+    }
+  }
+}
+
+void UpdateProjectiles(Projectile bullets[], float dt) {
+  for (int bulletIndex = 0; bulletIndex < MAX_PROJECTILES; bulletIndex++) {
+    Projectile *bullet = &bullets[bulletIndex];
+    if (bullet->active) {
+      bullet->pos = Vector2Add(bullet->pos,
+                               Vector2Scale(bullet->dir, bullet->speed * dt));
+      if (bullet->pos.y < 0)
+        bullet->active = false;
+    }
+  }
+}
+
+void DrawProjectiles(Projectile bullets[]) {
+  for (int bulletIndex = 0; bulletIndex < MAX_PROJECTILES; bulletIndex++) {
+    Projectile *bullet = &bullets[bulletIndex];
+    if (bullet->active) {
+      DrawCircleV(bullet->pos, bullet->radius, RED);
+    }
+  }
+}
+
 // Helper to draw text horizontally centered on screen
 void CenterText(const char *text, int yPos, int fontSize, Color textColor) {
   int textSize = MeasureText(text, fontSize);
   DrawText(text, (int)windowSize.x / 2 - textSize / 2, yPos, fontSize,
            textColor);
 }
-
-void UpdatePlayer(Player *player, float dt) {
-  player->dir = (Vector2){0.0f, 0.0f};
-  if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A))
-    player->dir.x -= 1.0f;
-  if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D))
-    player->dir.x += 1.0f;
-  if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W))
-    player->dir.y -= 1.0f;
-  if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S))
-    player->dir.y += 1.0f;
-
-  player->dir = Vector2Normalize(player->dir);
-
-  player->pos.x += player->dir.x * player->speed * dt;
-  player->pos.y += player->dir.y * player->speed * dt;
-
-  player->pos.x =
-      Clamp(player->pos.x, player->radius, windowSize.x - player->radius);
-  player->pos.y =
-      Clamp(player->pos.y, player->radius, windowSize.y - player->radius);
-};
-
-void DrawPlayer(Player *player) {
-    DrawCircleV(player->pos, player->radius, player->color);
-};
 
 // Main function
 int main() {
@@ -69,6 +118,8 @@ int main() {
   // Utility function from resource_dir.h to find the resources folder and set
   // it as the current working directory so we can load from it
   SearchAndSetResourceDir("resources");
+
+  Projectile bullets[MAX_PROJECTILES] = {0};
 
   Player player = {.pos = {windowSize.x / 2, windowSize.y / 2},
                    .radius = 25.0f,
@@ -84,6 +135,9 @@ int main() {
     float dt = GetFrameTime();
     UpdatePlayer(&player, dt);
 
+    PlayerShoot(&player, bullets);
+    UpdateProjectiles(bullets, dt);
+
     // draw
     BeginDrawing();
 
@@ -97,6 +151,7 @@ int main() {
     CenterText(screenSizeText, 220, font_size, WHITE);
 
     DrawPlayer(&player);
+    DrawProjectiles(bullets);
 
     // draw debug
     DrawText(TextFormat("Player Position: %i/%i", (int)player.pos.x,
@@ -106,8 +161,8 @@ int main() {
         TextFormat("Player Direction: %.2f/%.2f", player.dir.x, player.dir.y),
         20, 40, 20, RED);
 
-    // end the frame and get ready for the next one  (display frame, poll input,
-    // etc...)
+    // end the frame and get ready for the next one  (display frame, poll
+    // input, etc...)
     EndDrawing();
   }
 
