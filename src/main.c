@@ -15,10 +15,13 @@ https://creativecommons.org/publicdomain/zero/1.0/
 
 #include "resource_dir.h" // utility header for SearchAndSetResourceDir
 #define MAX_PROJECTILES 100
-#define MAX_ENEMIES 44
+#define MAX_ENEMIES 55
 #define MAX_ENEMIES_PER_ROW 11
 #define COL_PADDING 80
 #define ROW_PADDING 60
+
+#define PLAYER_HEALTH 5
+#define PLAYER_RADIUS 25.0f
 
 #define FOR_EACH_PROJECTILE(projectilePtr, projectileArray)                    \
   for (Projectile *projectilePtr = projectileArray;                            \
@@ -70,8 +73,8 @@ typedef struct GameState {
 } GameState;
 
 void InitPlayer(GameState *state) {
-  state->player = (Player){.pos = {windowSize.x / 2, windowSize.y / 2},
-                           .radius = 25.0f,
+  state->player = (Player){.pos = {windowSize.x / 2, windowSize.y - (PLAYER_RADIUS * 2)},
+                           .radius = PLAYER_RADIUS,
                            .color = GREEN,
                            .speed = 300.0f,
                            .dir = {0.0f, 0.0f},
