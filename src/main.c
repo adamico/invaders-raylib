@@ -19,6 +19,7 @@ https://creativecommons.org/publicdomain/zero/1.0/
 #define MAX_ENEMIES_PER_ROW 11
 #define COL_PADDING 80
 #define ROW_PADDING 60
+#define ENEMY_SPEED 50.0f
 
 #define PLAYER_HEALTH 5
 #define PLAYER_RADIUS 25.0f
@@ -70,15 +71,21 @@ typedef struct GameState {
   Player player;
   Projectile bullets[MAX_PROJECTILES];
   Enemy enemies[MAX_ENEMIES];
+  Vector2 enemyDirection;
+  int enemySpeed;
+  int activeEnemies;
+  GameScene currentScene;
+  bool victory;
 } GameState;
 
 void InitPlayer(GameState *state) {
-  state->player = (Player){.pos = {windowSize.x / 2, windowSize.y - (PLAYER_RADIUS * 2)},
-                           .radius = PLAYER_RADIUS,
-                           .color = GREEN,
-                           .speed = 300.0f,
-                           .dir = {0.0f, 0.0f},
-                           .health = 5};
+  state->player =
+      (Player){.pos = {windowSize.x / 2, windowSize.y - (PLAYER_RADIUS * 2)},
+               .radius = PLAYER_RADIUS,
+               .color = GREEN,
+               .speed = 300.0f,
+               .dir = {0.0f, 0.0f},
+               .health = 5};
 }
 
 void UpdatePlayer(GameState *state, float dt) {
@@ -155,6 +162,52 @@ void InitEnemies(GameState *state) {
                    .active = true,
                    .color = BLUE};
     state->enemies[enemyIndex] = enemy;
+    state->enemyDirection = (Vector2){1.0f, 0.0f};
+    state->enemySpeed = ENEMY_SPEED;
+    state->activeEnemies++;
+  }
+}
+
+void UpdateEnemies(GameState *state, float dt) {
+  Vector2 direction = state->enemyDirection;
+  int speed = state->enemySpeed;
+  bool needToMoveDown = false;
+  // enemies first move right
+  // until the right most enemy column reaches the edge of the screen,
+  // these two checks need to be inversed in two different loops
+
+  FOR_EACH_ENEMY(enemy, state->enemies) {
+    if (!enemy->active)
+      continue;
+
+    bool willHitRightEdge =
+        (enemy->pos.x + enemy->radius) >= windowSize.x && direction.x > 0;
+    bool willHitLeftEdge =
+        (enemy->pos.x - enemy->radius) <= 0 && direction.x < 0;
+    if (willHitRightEdge || willHitLeftEdge) {
+      state->enemyDirection.x *= -1.0f;
+      needToMoveDown = true;
+      break;
+    }
+  }
+
+  if (needToMoveDown) {
+    FOR_EACH_ENEMY(enemy, state->enemies) {
+      enemy->pos.y += ROW_PADDING / 2.0;
+      if (enemy->pos.y > windowSize.y) {
+        state->currentScene = GAMEOVER;
+        break;
+      }
+    }
+    needToMoveDown = false;
+  }
+
+  FOR_EACH_ENEMY(enemy, state->enemies) {
+    if (!enemy->active)
+      continue;
+
+    Vector2 *enemyPos = &enemy->pos;
+    *enemyPos = Vector2Add(*enemyPos, Vector2Scale(direction, speed * dt));
   }
 }
 
@@ -178,6 +231,7 @@ void CheckBulletEnemyCollisions(GameState *state) {
                                 enemy->radius)) {
         bullet->active = false;
         enemy->active = false;
+        state->activeEnemies--;
       }
     }
   }
@@ -191,7 +245,7 @@ void CheckPlayerEnemyCollisions(GameState *state) {
     if (CheckCollisionCircles(state->player.pos, state->player.radius,
                               enemy->pos, enemy->radius)) {
       enemy->active = false;
-      state->player.health -= 1;
+      state->currentScene = GAMEOVER;
     }
   }
 }
@@ -205,13 +259,14 @@ void CenterText(const char *text, int yPos, int fontSize, Color textColor) {
 
 void InitGame(GameState *state) {
   *state = (GameState){0};
+  state->victory = false;
   InitPlayer(state);
   InitEnemies(state);
 }
 
-void UpdateTitle(GameState *state, GameScene *currentScene) {
+void UpdateTitle(GameState *state) {
   if (IsKeyPressed(KEY_SPACE))
-    *currentScene = GAMEPLAY;
+    state->currentScene = GAMEPLAY;
 }
 
 void DrawTitle(GameState *state) {
@@ -222,18 +277,27 @@ void DrawTitle(GameState *state) {
   EndDrawing();
 }
 
-void CheckIfPlayerDied(GameState *state, GameScene *currentScene) {
+void CheckIfPlayerDied(GameState *state) {
   if (state->player.health <= 0)
-    *currentScene = GAMEOVER;
+    state->currentScene = GAMEOVER;
 }
 
-void UpdateGame(GameState *state, GameScene *currentScene, float dt) {
+void CheckIfPlayerWon(GameState *state) {
+  if (state->activeEnemies <= 0) {
+    state->victory = true;
+    state->currentScene = GAMEOVER;
+  }
+}
+
+void UpdateGame(GameState *state, float dt) {
+  CheckIfPlayerDied(state);
+  CheckIfPlayerWon(state);
   UpdatePlayer(state, dt);
+  UpdateEnemies(state, dt);
   PlayerShoot(state);
   UpdateProjectiles(state, dt);
   CheckBulletEnemyCollisions(state);
   CheckPlayerEnemyCollisions(state);
-  CheckIfPlayerDied(state, currentScene);
 }
 
 void DrawGame(GameState *state) {
@@ -252,6 +316,10 @@ void DrawGame(GameState *state) {
   DrawText(TextFormat("Health: %i", state->player.health), 20, 60, font_size,
            RED);
 
+  // draw active enemies
+  DrawText(TextFormat("Active Enemies: %i", state->activeEnemies), 20, 80,
+           font_size, RED);
+
   // draw debug
   DrawText(TextFormat("Player Position: %i/%i", (int)state->player.pos.x,
                       (int)state->player.pos.y),
@@ -259,15 +327,12 @@ void DrawGame(GameState *state) {
   DrawText(TextFormat("Player Direction: %.2f/%.2f", state->player.dir.x,
                       state->player.dir.y),
            20, 40, font_size, RED);
-
-  // end the frame and get ready for the next one  (display frame, poll
-  // input, etc...)
   EndDrawing();
 }
 
-void UpdateGameOver(GameState *state, GameScene *currentScene) {
+void UpdateGameOver(GameState *state) {
   if (IsKeyPressed(KEY_ENTER)) {
-    *currentScene = TITLE;
+    state->currentScene = TITLE;
     InitGame(state);
   }
 }
@@ -275,8 +340,16 @@ void UpdateGameOver(GameState *state, GameScene *currentScene) {
 void DrawGameOver(GameState *state) {
   BeginDrawing();
   ClearBackground(BLACK);
-  CenterText("Game Over", windowSize.y / 2, 50, RED);
-  CenterText("Press Enter to go to Title", windowSize.y / 2 + 100, 20, RED);
+  char *gameOverText = "Game Over";
+  Color textColor = RED;
+
+  if (state->victory) {
+    gameOverText = "You Win!";
+    textColor = GREEN;
+  }
+  CenterText(gameOverText, windowSize.y / 2, 50, textColor);
+  CenterText("Press Enter to go to Title", windowSize.y / 2 + 100, 20,
+             textColor);
   EndDrawing();
 }
 
@@ -295,21 +368,21 @@ int main() {
   GameState state = {0};
   InitGame(&state);
 
-  GameScene currentScene = TITLE;
+  state.currentScene = TITLE;
 
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
-    switch (currentScene) {
+    switch (state.currentScene) {
     case TITLE:
-      UpdateTitle(&state, &currentScene);
+      UpdateTitle(&state);
       DrawTitle(&state);
       break;
     case GAMEPLAY:
-      UpdateGame(&state, &currentScene, dt);
+      UpdateGame(&state, dt);
       DrawGame(&state);
       break;
     case GAMEOVER:
-      UpdateGameOver(&state, &currentScene);
+      UpdateGameOver(&state);
       DrawGameOver(&state);
       break;
     }
