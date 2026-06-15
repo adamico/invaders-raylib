@@ -10,7 +10,7 @@
 RAYLIB_SRC = build/external/raylib/src
 RAYLIB_LIB = $(RAYLIB_SRC)/libraylib.a
 
-SRC    = src/main.c
+SRC    = src/*.c
 TARGET = bin/game
 
 CC     = clang
