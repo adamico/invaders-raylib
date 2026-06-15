@@ -192,7 +192,7 @@ void InitGame(GameState *state) {
 }
 
 void UpdateTitle(GameState *state, GameScene *currentScene) {
-  if (IsKeyPressed(KEY_ENTER))
+  if (IsKeyPressed(KEY_SPACE))
     *currentScene = GAMEPLAY;
 }
 
@@ -200,7 +200,7 @@ void DrawTitle(GameState *state) {
   BeginDrawing();
   ClearBackground(BLACK);
   CenterText("Invaders RL", windowSize.y / 2, 40, WHITE);
-  CenterText("Press Enter to Start", windowSize.y / 2 + 100, 20, WHITE);
+  CenterText("Press Space to Start", windowSize.y / 2 + 100, 20, WHITE);
   EndDrawing();
 }
 
@@ -243,8 +243,10 @@ void DrawGame(GameState *state) {
 }
 
 void UpdateGameOver(GameState *state, GameScene *currentScene) {
-  if (IsKeyPressed(KEY_ENTER))
+  if (IsKeyPressed(KEY_ENTER)){
     *currentScene = TITLE;
+    InitGame(state);
+  }
 }
 
 void DrawGameOver(GameState *state) {
@@ -275,16 +277,16 @@ int main() {
     float dt = GetFrameTime();
     switch (currentScene) {
     case TITLE:
-      DrawTitle(&state);
       UpdateTitle(&state, &currentScene);
+      DrawTitle(&state);
       break;
     case GAMEPLAY:
       UpdateGame(&state, &currentScene, dt);
       DrawGame(&state);
       break;
     case GAMEOVER:
-      DrawGameOver(&state);
       UpdateGameOver(&state, &currentScene);
+      DrawGameOver(&state);
       break;
     }
   }
