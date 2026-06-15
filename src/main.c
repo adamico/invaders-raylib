@@ -43,6 +43,7 @@ typedef struct Player {
   Color color;
   float speed;
   Vector2 dir;
+  int health;
 } Player;
 
 // Bullet
@@ -73,7 +74,8 @@ void InitPlayer(GameState *state) {
                            .radius = 25.0f,
                            .color = GREEN,
                            .speed = 300.0f,
-                           .dir = {0.0f, 0.0f}};
+                           .dir = {0.0f, 0.0f},
+                           .health = 5};
 }
 
 void UpdatePlayer(GameState *state, float dt) {
@@ -178,6 +180,19 @@ void CheckBulletEnemyCollisions(GameState *state) {
   }
 }
 
+void CheckPlayerEnemyCollisions(GameState *state) {
+  FOR_EACH_ENEMY(enemy, state->enemies) {
+    if (!enemy->active)
+      continue;
+
+    if (CheckCollisionCircles(state->player.pos, state->player.radius,
+                              enemy->pos, enemy->radius)) {
+      enemy->active = false;
+      state->player.health -= 1;
+    }
+  }
+}
+
 // Helper to draw text horizontally centered on screen
 void CenterText(const char *text, int yPos, int fontSize, Color textColor) {
   int textSize = MeasureText(text, fontSize);
@@ -205,8 +220,8 @@ void DrawTitle(GameState *state) {
 }
 
 void CheckIfPlayerDied(GameState *state, GameScene *currentScene) {
-  // if (state->player.health <= 0)
-  //   *currentScene = GAMEOVER;
+  if (state->player.health <= 0)
+    *currentScene = GAMEOVER;
 }
 
 void UpdateGame(GameState *state, GameScene *currentScene, float dt) {
@@ -214,6 +229,7 @@ void UpdateGame(GameState *state, GameScene *currentScene, float dt) {
   PlayerShoot(state);
   UpdateProjectiles(state, dt);
   CheckBulletEnemyCollisions(state);
+  CheckPlayerEnemyCollisions(state);
   CheckIfPlayerDied(state, currentScene);
 }
 
@@ -229,6 +245,10 @@ void DrawGame(GameState *state) {
   DrawEnemies(state);
   DrawProjectiles(state);
 
+  // draw health
+  DrawText(TextFormat("Health: %i", state->player.health), 20, 60, font_size,
+           RED);
+
   // draw debug
   DrawText(TextFormat("Player Position: %i/%i", (int)state->player.pos.x,
                       (int)state->player.pos.y),
@@ -243,7 +263,7 @@ void DrawGame(GameState *state) {
 }
 
 void UpdateGameOver(GameState *state, GameScene *currentScene) {
-  if (IsKeyPressed(KEY_ENTER)){
+  if (IsKeyPressed(KEY_ENTER)) {
     *currentScene = TITLE;
     InitGame(state);
   }
@@ -252,7 +272,8 @@ void UpdateGameOver(GameState *state, GameScene *currentScene) {
 void DrawGameOver(GameState *state) {
   BeginDrawing();
   ClearBackground(BLACK);
-  DrawText("Game Over", windowSize.x / 2 - 100, windowSize.y / 2, 50, RED);
+  CenterText("Game Over", windowSize.y / 2, 50, RED);
+  CenterText("Press Enter to go to Title", windowSize.y / 2 + 100, 20, RED);
   EndDrawing();
 }
 
