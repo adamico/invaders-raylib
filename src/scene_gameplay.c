@@ -1,35 +1,9 @@
-#include "game.h"
-
-#include "raylib.h"
-#include "raymath.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include "raylib.h"
+#include "raymath.h"
 
-#define MAX_PROJECTILES 100
-#define MAX_ENEMIES 55
-
-#define MAX_ENEMIES_PER_ROW 11
-#define COL_PADDING 80
-#define ROW_PADDING 60
-#define ENEMY_SPEED 50.0f
-
-#define PLAYER_HEALTH 5
-#define PLAYER_RADIUS 25.0f
-
-#define FOR_EACH_PROJECTILE(projectilePtr, projectileArray)                    \
-  for (Projectile *projectilePtr = projectileArray;                            \
-       projectilePtr < projectileArray + MAX_PROJECTILES; projectilePtr++)
-
-#define FOR_EACH_ENEMY(enemyPtr, enemyArray)                                   \
-  for (Enemy *enemyPtr = enemyArray; enemyPtr < enemyArray + MAX_ENEMIES;      \
-       enemyPtr++)
-
-const Vector2 windowSize = {1280, 720};
-const Vector2 startGridPos = {
-    ((windowSize.x - (MAX_ENEMIES_PER_ROW * COL_PADDING)) / 2) +
-        (COL_PADDING / 2.0),
-    100};
-
+#include "scene_gameplay.h"
 
 void InitPlayer(GameState *state) {
   state->player =
@@ -38,7 +12,37 @@ void InitPlayer(GameState *state) {
                .color = GREEN,
                .speed = 300.0f,
                .dir = {0.0f, 0.0f},
-               .health = 5};
+               .health = PLAYER_HEALTH};
+}
+
+
+void InitEnemies(GameState *state) {
+  Vector2 startGridPos = {
+      ((windowSize.x - (MAX_ENEMIES_PER_ROW * COL_PADDING)) / 2) +
+          (COL_PADDING / 2.0),
+      100};
+  for (int enemyIndex = 0; enemyIndex < MAX_ENEMIES; enemyIndex++) {
+    int column = enemyIndex % MAX_ENEMIES_PER_ROW;
+    int row = enemyIndex / MAX_ENEMIES_PER_ROW;
+    int offsetX = startGridPos.x;
+    int offsetY = startGridPos.y;
+    Enemy enemy = {.pos = (Vector2){offsetX + (column * COL_PADDING),
+                                    offsetY + (row * ROW_PADDING)},
+                   .radius = 20,
+                   .active = true,
+                   .color = BLUE};
+    state->enemies[enemyIndex] = enemy;
+    state->enemyDirection = (Vector2){1.0f, 0.0f};
+    state->enemySpeed = ENEMY_SPEED;
+    state->activeEnemies++;
+  }
+}
+
+void InitGameplay(GameState *state) {
+  *state = (GameState){0};
+  state->victory = false;
+  InitPlayer(state);
+  InitEnemies(state);
 }
 
 void UpdatePlayer(GameState *state, float dt) {
@@ -103,23 +107,6 @@ void DrawProjectiles(GameState *state) {
   }
 }
 
-void InitEnemies(GameState *state) {
-  for (int enemyIndex = 0; enemyIndex < MAX_ENEMIES; enemyIndex++) {
-    int column = enemyIndex % MAX_ENEMIES_PER_ROW;
-    int row = enemyIndex / MAX_ENEMIES_PER_ROW;
-    int offsetX = startGridPos.x;
-    int offsetY = startGridPos.y;
-    Enemy enemy = {.pos = (Vector2){offsetX + (column * COL_PADDING),
-                                    offsetY + (row * ROW_PADDING)},
-                   .radius = 20,
-                   .active = true,
-                   .color = BLUE};
-    state->enemies[enemyIndex] = enemy;
-    state->enemyDirection = (Vector2){1.0f, 0.0f};
-    state->enemySpeed = ENEMY_SPEED;
-    state->activeEnemies++;
-  }
-}
 
 void UpdateEnemies(GameState *state, float dt) {
   Vector2 direction = state->enemyDirection;
@@ -203,33 +190,6 @@ void CheckPlayerEnemyCollisions(GameState *state) {
   }
 }
 
-// Helper to draw text horizontally centered on screen
-void CenterText(const char *text, int yPos, int fontSize, Color textColor) {
-  int textSize = MeasureText(text, fontSize);
-  DrawText(text, (int)windowSize.x / 2 - textSize / 2, yPos, fontSize,
-           textColor);
-}
-
-void InitGame(GameState *state) {
-  *state = (GameState){0};
-  state->victory = false;
-  InitPlayer(state);
-  InitEnemies(state);
-}
-
-void UpdateTitle(GameState *state) {
-  if (IsKeyPressed(KEY_SPACE))
-    state->currentScene = GAMEPLAY;
-}
-
-void DrawTitle(GameState *state) {
-  BeginDrawing();
-  ClearBackground(BLACK);
-  CenterText("Invaders RL", windowSize.y / 2, 40, WHITE);
-  CenterText("Press Space to Start", windowSize.y / 2 + 100, 20, WHITE);
-  EndDrawing();
-}
-
 void CheckIfPlayerDied(GameState *state) {
   if (state->player.health <= 0)
     state->currentScene = GAMEOVER;
@@ -242,7 +202,7 @@ void CheckIfPlayerWon(GameState *state) {
   }
 }
 
-void UpdateGame(GameState *state, float dt) {
+void UpdateGameplay(GameState *state, float dt) {
   CheckIfPlayerDied(state);
   CheckIfPlayerWon(state);
   UpdatePlayer(state, dt);
@@ -253,7 +213,7 @@ void UpdateGame(GameState *state, float dt) {
   CheckPlayerEnemyCollisions(state);
 }
 
-void DrawGame(GameState *state) {
+void DrawGameplay(GameState *state) {
   BeginDrawing();
 
   // Setup the back buffer for drawing (clear color and depth buffers)
@@ -280,28 +240,5 @@ void DrawGame(GameState *state) {
   DrawText(TextFormat("Player Direction: %.2f/%.2f", state->player.dir.x,
                       state->player.dir.y),
            20, 40, font_size, RED);
-  EndDrawing();
-}
-
-void UpdateGameover(GameState *state) {
-  if (IsKeyPressed(KEY_ENTER)) {
-    state->currentScene = TITLE;
-    InitGame(state);
-  }
-}
-
-void DrawGameover(GameState *state) {
-  BeginDrawing();
-  ClearBackground(BLACK);
-  char *gameOverText = "Game Over";
-  Color textColor = RED;
-
-  if (state->victory) {
-    gameOverText = "You Win!";
-    textColor = GREEN;
-  }
-  CenterText(gameOverText, windowSize.y / 2, 50, textColor);
-  CenterText("Press Enter to go to Title", windowSize.y / 2 + 100, 20,
-             textColor);
   EndDrawing();
 }

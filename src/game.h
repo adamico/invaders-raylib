@@ -1,10 +1,30 @@
+#include "raylib.h"
+
 #ifndef GAME_H
 #define GAME_H
 
-#include <raylib.h>
-
 #define MAX_PROJECTILES 100
 #define MAX_ENEMIES 55
+#define MAX_ENEMIES_PER_ROW 11
+#define COL_PADDING 80
+#define ROW_PADDING 60
+#define ENEMY_SPEED 50.0f
+
+#define PLAYER_HEALTH 5
+#define PLAYER_RADIUS 25.0f
+
+#define FOR_EACH_PROJECTILE(projectilePtr, projectileArray)                    \
+  for (Projectile *projectilePtr = projectileArray;                            \
+       projectilePtr < projectileArray + MAX_PROJECTILES; projectilePtr++)
+
+#define FOR_EACH_ENEMY(enemyPtr, enemyArray)                                   \
+  for (Enemy *enemyPtr = enemyArray; enemyPtr < enemyArray + MAX_ENEMIES;      \
+       enemyPtr++)
+
+extern const Vector2 windowSize;
+
+// Helper to draw text horizontally centered on screen
+void CenterText(const char *text, int yPos, int fontSize, Color textColor);
 
 typedef enum GameScene { TITLE, GAMEPLAY, GAMEOVER } GameScene;
 
@@ -46,14 +66,6 @@ typedef struct GameState {
   bool victory;
 } GameState;
 
-void InitGame(GameState *state);
-
-void UpdateTitle(GameState *state);
-void UpdateGame(GameState *state, float dt);
-void UpdateGameover(GameState *state);
-
-void DrawTitle(GameState *state);
-void DrawGame(GameState *state);
-void DrawGameover(GameState *state);
+void InitGameplay(GameState *state);
 
 #endif

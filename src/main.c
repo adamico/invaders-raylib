@@ -9,7 +9,11 @@ https://creativecommons.org/publicdomain/zero/1.0/
 */
 
 #include "raylib.h"
-#include "game.h"
+#include "scene_title.h"
+#include "scene_gameplay.h"
+#include "scene_gameover.h"
+
+const Vector2 windowSize = {1280, 720};
 
 // Main function
 int main() {
@@ -18,7 +22,7 @@ int main() {
   InitWindow(1280, 720, "Invaders RL");
 
   GameState state = {0};
-  InitGame(&state);
+  InitGameplay(&state);
 
   state.currentScene = TITLE;
 
@@ -29,8 +33,8 @@ int main() {
       DrawTitle(&state);
       break;
     case GAMEPLAY:
-      UpdateGame(&state, GetFrameTime());
-      DrawGame(&state);
+      UpdateGameplay(&state, GetFrameTime());
+      DrawGameplay(&state);
       break;
     case GAMEOVER:
       UpdateGameover(&state);
