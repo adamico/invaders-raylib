@@ -10,6 +10,7 @@ https://creativecommons.org/publicdomain/zero/1.0/
 
 #include "raylib.h"
 #include "raymath.h"
+#include <stdarg.h>
 #include <stdio.h>
 
 #include "resource_dir.h" // utility header for SearchAndSetResourceDir
@@ -32,6 +33,8 @@ const Vector2 startGridPos = {
     ((windowSize.x - (MAX_ENEMIES_PER_ROW * COL_PADDING)) / 2) +
         (COL_PADDING / 2.0),
     100};
+
+typedef enum GameScene { TITLE, GAMEPLAY, GAMEOVER } GameScene;
 
 // Player definition
 typedef struct Player {
@@ -67,10 +70,10 @@ typedef struct GameState {
 
 void InitPlayer(GameState *state) {
   state->player = (Player){.pos = {windowSize.x / 2, windowSize.y / 2},
-                          .radius = 25.0f,
-                          .color = GREEN,
-                          .speed = 300.0f,
-                          .dir = {0.0f, 0.0f}};
+                           .radius = 25.0f,
+                           .color = GREEN,
+                           .speed = 300.0f,
+                           .dir = {0.0f, 0.0f}};
 }
 
 void UpdatePlayer(GameState *state, float dt) {
@@ -188,11 +191,30 @@ void InitGame(GameState *state) {
   InitEnemies(state);
 }
 
-void UpdateGame(GameState *state, float dt) {
+void UpdateTitle(GameState *state, GameScene *currentScene) {
+  if (IsKeyPressed(KEY_ENTER))
+    *currentScene = GAMEPLAY;
+}
+
+void DrawTitle(GameState *state) {
+  BeginDrawing();
+  ClearBackground(BLACK);
+  CenterText("Invaders RL", windowSize.y / 2, 40, WHITE);
+  CenterText("Press Enter to Start", windowSize.y / 2 + 100, 20, WHITE);
+  EndDrawing();
+}
+
+void CheckIfPlayerDied(GameState *state, GameScene *currentScene) {
+  // if (state->player.health <= 0)
+  //   *currentScene = GAMEOVER;
+}
+
+void UpdateGame(GameState *state, GameScene *currentScene, float dt) {
   UpdatePlayer(state, dt);
   PlayerShoot(state);
-  CheckBulletEnemyCollisions(state);
   UpdateProjectiles(state, dt);
+  CheckBulletEnemyCollisions(state);
+  CheckIfPlayerDied(state, currentScene);
 }
 
 void DrawGame(GameState *state) {
@@ -211,12 +233,24 @@ void DrawGame(GameState *state) {
   DrawText(TextFormat("Player Position: %i/%i", (int)state->player.pos.x,
                       (int)state->player.pos.y),
            20, 20, font_size, RED);
-  DrawText(
-      TextFormat("Player Direction: %.2f/%.2f", state->player.dir.x, state->player.dir.y),
-      20, 40, font_size, RED);
+  DrawText(TextFormat("Player Direction: %.2f/%.2f", state->player.dir.x,
+                      state->player.dir.y),
+           20, 40, font_size, RED);
 
   // end the frame and get ready for the next one  (display frame, poll
   // input, etc...)
+  EndDrawing();
+}
+
+void UpdateGameOver(GameState *state, GameScene *currentScene) {
+  if (IsKeyPressed(KEY_ENTER))
+    *currentScene = TITLE;
+}
+
+void DrawGameOver(GameState *state) {
+  BeginDrawing();
+  ClearBackground(BLACK);
+  DrawText("Game Over", windowSize.x / 2 - 100, windowSize.y / 2, 50, RED);
   EndDrawing();
 }
 
@@ -235,10 +269,24 @@ int main() {
   GameState state = {0};
   InitGame(&state);
 
+  GameScene currentScene = TITLE;
+
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
-    UpdateGame(&state, dt);
-    DrawGame(&state);
+    switch (currentScene) {
+    case TITLE:
+      DrawTitle(&state);
+      UpdateTitle(&state, &currentScene);
+      break;
+    case GAMEPLAY:
+      UpdateGame(&state, &currentScene, dt);
+      DrawGame(&state);
+      break;
+    case GAMEOVER:
+      DrawGameOver(&state);
+      UpdateGameOver(&state, &currentScene);
+      break;
+    }
   }
 
   // destroy the window and cleanup the OpenGL context
