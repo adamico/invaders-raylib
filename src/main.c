@@ -14,12 +14,13 @@ https://creativecommons.org/publicdomain/zero/1.0/
 #include "scene_gameover.h"
 
 const Vector2 windowSize = {1280, 720};
+const char* gameName = "Invaders RL";
 
 // Main function
 int main() {
   SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
 
-  InitWindow(1280, 720, "Invaders RL");
+  InitWindow(windowSize.x, windowSize.y, gameName);
 
   GameState state = {0};
   InitGameplay(&state);
