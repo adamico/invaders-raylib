@@ -1,20 +1,22 @@
-#include <stdarg.h>
-#include <stdio.h>
+#include "game.h"
 #include "raylib.h"
 #include "raymath.h"
+#include <stdarg.h>
+#include <stdio.h>
 
 #include "scene_gameplay.h"
 
+const int canvas_size = 50;
+const Vector2 canvas_offset = {-canvas_size / 2.0, -canvas_size / 2.0};
+
 void InitPlayer(GameState *state) {
   state->player =
-      (Player){.pos = {windowSize.x / 2, windowSize.y - (PLAYER_RADIUS * 2)},
+      (Player){.pos = {windowSize.x / 2, windowSize.y - (PLAYER_RADIUS * 4)},
                .radius = PLAYER_RADIUS,
-               .color = GREEN,
                .speed = 300.0f,
                .dir = {0.0f, 0.0f},
                .health = PLAYER_HEALTH};
 }
-
 
 void InitEnemies(GameState *state) {
   Vector2 startGridPos = {
@@ -28,9 +30,8 @@ void InitEnemies(GameState *state) {
     int offsetY = startGridPos.y;
     Enemy enemy = {.pos = (Vector2){offsetX + (column * COL_PADDING),
                                     offsetY + (row * ROW_PADDING)},
-                   .radius = 20,
-                   .active = true,
-                   .color = BLUE};
+                   .radius = ENEMY_RADIUS,
+                   .active = true};
     state->enemies[enemyIndex] = enemy;
     state->enemyDirection = (Vector2){1.0f, 0.0f};
     state->enemySpeed = ENEMY_SPEED;
@@ -39,7 +40,10 @@ void InitEnemies(GameState *state) {
 }
 
 void InitGameplay(GameState *state) {
+  GameResources resBackup = state->resources;
   *state = (GameState){0};
+  state->resources = resBackup;
+
   state->victory = false;
   InitPlayer(state);
   InitEnemies(state);
@@ -68,14 +72,21 @@ void UpdatePlayer(GameState *state, float dt) {
                    (Vector2){windowSize.x - radius, windowSize.y - radius});
 };
 
+void DrawOffset(Texture2D texture, Vector2 pos, Color tint) {
+  Vector2 drawPos = Vector2Add(pos, canvas_offset);
+  DrawTextureV(texture, drawPos, tint);
+}
+
 void DrawPlayer(GameState *state) {
-  DrawCircleV(state->player.pos, state->player.radius, state->player.color);
+  DrawOffset(state->resources.playerTexture, state->player.pos, WHITE);
+  DrawCircleLinesV(state->player.pos, state->player.radius, RED);
 };
 
 void PlayerShoot(GameState *state) {
   if (!IsKeyPressed(KEY_SPACE))
     return;
 
+  PlaySound(state->resources.laserSound);
   FOR_EACH_PROJECTILE(bullet, state->bullets) {
     if (bullet->active)
       continue;
@@ -102,28 +113,26 @@ void UpdateProjectiles(GameState *state, float dt) {
 void DrawProjectiles(GameState *state) {
   FOR_EACH_PROJECTILE(bullet, state->bullets) {
     if (bullet->active) {
-      DrawCircleV(bullet->pos, bullet->radius, RED);
+      DrawOffset(state->resources.laserTexture, bullet->pos, WHITE);
+      DrawCircleLinesV(bullet->pos, bullet->radius, RED);
     }
   }
 }
-
 
 void UpdateEnemies(GameState *state, float dt) {
   Vector2 direction = state->enemyDirection;
   int speed = state->enemySpeed;
   bool needToMoveDown = false;
-  // enemies first move right
-  // until the right most enemy column reaches the edge of the screen,
-  // these two checks need to be inversed in two different loops
-
+  int rightEdge = windowSize.x - ENEMY_RADIUS;
+  int leftEdge = ENEMY_RADIUS;
   FOR_EACH_ENEMY(enemy, state->enemies) {
     if (!enemy->active)
       continue;
 
     bool willHitRightEdge =
-        (enemy->pos.x + enemy->radius) >= windowSize.x && direction.x > 0;
+        (enemy->pos.x + enemy->radius) >= rightEdge && direction.x > 0;
     bool willHitLeftEdge =
-        (enemy->pos.x - enemy->radius) <= 0 && direction.x < 0;
+        (enemy->pos.x - enemy->radius) <= leftEdge && direction.x < 0;
     if (willHitRightEdge || willHitLeftEdge) {
       state->enemyDirection.x *= -1.0f;
       needToMoveDown = true;
@@ -153,8 +162,10 @@ void UpdateEnemies(GameState *state, float dt) {
 
 void DrawEnemies(GameState *state) {
   FOR_EACH_ENEMY(enemy, state->enemies) {
-    if (enemy->active)
-      DrawCircleV(enemy->pos, enemy->radius, enemy->color);
+    if (enemy->active) {
+      DrawOffset(state->resources.enemyTexture, enemy->pos, WHITE);
+      DrawCircleLinesV(enemy->pos, enemy->radius, RED);
+    }
   }
 }
 
@@ -169,6 +180,7 @@ void CheckBulletEnemyCollisions(GameState *state) {
 
       if (CheckCollisionCircles(bullet->pos, bullet->radius, enemy->pos,
                                 enemy->radius)) {
+        PlaySound(state->resources.explosionSound);
         bullet->active = false;
         enemy->active = false;
         state->activeEnemies--;

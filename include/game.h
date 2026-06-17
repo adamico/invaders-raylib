@@ -9,8 +9,9 @@
 #define COL_PADDING 80
 #define ROW_PADDING 60
 #define ENEMY_SPEED 50.0f
+#define ENEMY_RADIUS 15.0f
 #define PLAYER_HEALTH 5
-#define PLAYER_RADIUS 25.0f
+#define PLAYER_RADIUS 12.5f
 
 #define FOR_EACH_PROJECTILE(projectilePtr, projectileArray)                    \
   for (Projectile *projectilePtr = projectileArray;                            \
@@ -51,6 +52,14 @@ typedef struct Enemy {
   Color color;
 } Enemy;
 
+typedef struct GameResources {
+  Texture2D playerTexture;
+  Texture2D enemyTexture;
+  Texture2D laserTexture;
+  Sound laserSound;
+  Sound explosionSound;
+} GameResources;
+
 typedef struct GameState {
   Player player;
   Projectile bullets[MAX_PROJECTILES];
@@ -60,7 +69,11 @@ typedef struct GameState {
   int activeEnemies;
   GameScene currentScene;
   bool victory;
+  GameResources resources;
 } GameState;
+
+void LoadGameResources(GameResources *resources);
+void UnloadGameResources(GameResources *resources);
 
 void CenterText(const char *text, int yPos, int fontSize, Color textColor);
 void InitGameplay(GameState *state);

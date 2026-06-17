@@ -1,28 +1,39 @@
-/*
-Raylib example file.
-This is an example main file for a simple raylib project.
-Use this as a starting point or replace it with your code.
-
-by Jeffery Myers is marked with CC0 1.0. To view a copy of this license, visit
-https://creativecommons.org/publicdomain/zero/1.0/
-
-*/
-
 #include "raylib.h"
-#include "scene_title.h"
-#include "scene_gameplay.h"
+#include "resource_dir.h"
 #include "scene_gameover.h"
+#include "scene_gameplay.h"
+#include "scene_title.h"
 
 const Vector2 windowSize = {1280, 720};
-const char* gameName = "Invaders RL";
+const char *gameName = "Invaders RL";
+
+void LoadGameResources(GameResources *resources) {
+  resources->playerTexture = LoadTexture("player.png");
+  resources->enemyTexture = LoadTexture("enemy.png");
+  resources->laserTexture = LoadTexture("laser.png");
+  resources->laserSound = LoadSound("laser.wav");
+  resources->explosionSound = LoadSound("explosion.wav");
+}
+
+void UnloadGameResources(GameResources *resources) {
+  UnloadTexture(resources->playerTexture);
+  UnloadTexture(resources->enemyTexture);
+  UnloadTexture(resources->laserTexture);
+  UnloadSound(resources->laserSound);
+  UnloadSound(resources->explosionSound);
+}
 
 // Main function
 int main() {
+  SearchAndSetResourceDir("resources");
   SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
 
   InitWindow(windowSize.x, windowSize.y, gameName);
+  InitAudioDevice();
 
   GameState state = {0};
+
+  LoadGameResources(&state.resources);
   InitGameplay(&state);
 
   state.currentScene = TITLE;
@@ -44,7 +55,8 @@ int main() {
     }
   }
 
-  // destroy the window and cleanup the OpenGL context
+  UnloadGameResources(&state.resources);
+  CloseAudioDevice();
   CloseWindow();
   return 0;
 }
