@@ -1,7 +1,7 @@
-#include <stdarg.h>
-#include <stdio.h>
 #include "raylib.h"
 #include "raymath.h"
+#include <stdarg.h>
+#include <stdio.h>
 
 #include "game.h"
 #include "scene_gameplay.h"
@@ -21,6 +21,7 @@
 #define ROW_PADDING 60
 #define ENEMY_SPEED 50.0f
 #define ENEMY_RADIUS 15.0f
+#define ENEMY_SCORE_VALUE 100
 #define START_GRID_POS                                                         \
   (Vector2){((windowSize.x - (MAX_ENEMIES_PER_ROW * COL_PADDING)) / 2) +       \
                 (COL_PADDING / 2.0),                                           \
@@ -51,7 +52,8 @@ void InitEnemies(GameState *state) {
     Enemy enemy = {.pos = (Vector2){offsetX + (column * COL_PADDING),
                                     offsetY + (row * ROW_PADDING)},
                    .radius = ENEMY_RADIUS,
-                   .active = true};
+                   .active = true,
+                   .scoreValue = ENEMY_SCORE_VALUE};
     state->enemies[enemyIndex] = enemy;
     state->enemyDirection = (Vector2){1.0f, 0.0f};
     state->enemySpeed = ENEMY_SPEED;
@@ -204,6 +206,7 @@ void CheckBulletEnemyCollisions(GameState *state) {
         bullet->active = false;
         enemy->active = false;
         state->activeEnemies--;
+        state->score += enemy->scoreValue;
       }
     }
   }
@@ -257,20 +260,9 @@ void DrawGameplay(GameState *state) {
   DrawEnemies(state);
   DrawProjectiles(state);
 
-  // draw health
-  DrawText(TextFormat("Health: %i", state->player.health), 20, 60, font_size,
-           RED);
+  DrawText(TextFormat("Health: %i", state->player.health), 20,
+           windowSize.y - 40, font_size, WHITE);
 
-  // draw active enemies
-  DrawText(TextFormat("Active Enemies: %i", state->activeEnemies), 20, 80,
-           font_size, RED);
-
-  // draw debug
-  DrawText(TextFormat("Player Position: %i/%i", (int)state->player.pos.x,
-                      (int)state->player.pos.y),
-           20, 20, font_size, RED);
-  DrawText(TextFormat("Player Direction: %.2f/%.2f", state->player.dir.x,
-                      state->player.dir.y),
-           20, 40, font_size, RED);
+  DrawText(TextFormat("Score: %i", state->score), 20, 20, font_size, WHITE);
   EndDrawing();
 }

@@ -33,6 +33,7 @@ typedef struct Enemy {
   Vector2 pos;
   float radius;
   bool active;
+  int scoreValue;
 } Enemy;
 
 typedef struct GameResources {
@@ -53,6 +54,7 @@ typedef struct GameState {
   GameScene currentScene;
   bool victory;
   GameResources resources;
+  int score;
 } GameState;
 
 void LoadGameResources(GameResources *resources);
