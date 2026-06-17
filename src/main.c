@@ -3,6 +3,7 @@
 #include "scene_gameover.h"
 #include "scene_gameplay.h"
 #include "scene_title.h"
+#include <stdio.h>
 
 const Vector2 windowSize = {1280, 720};
 const char *gameName = "Invaders RL";
@@ -25,6 +26,12 @@ void UnloadGameResources(GameResources *resources) {
 
 // Main function
 int main() {
+#ifdef DEBUG
+  printf(">>> ENGINE BOOTING IN DEBUG MODE\n");
+#else
+  printf(">>> ENGINE BOOTING IN RELEASE MODE\n");
+#endif
+
   SearchAndSetResourceDir("resources");
   SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
 

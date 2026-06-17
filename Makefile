@@ -14,7 +14,16 @@ SRC    = src/*.c
 TARGET = bin/game
 
 CC     = clang
-CFLAGS = -std=c99 -g -Wall -I$(RAYLIB_SRC) -Iinclude
+
+BUILD_MODE ?= DEBUG
+CFLAGS = -std=c99 -Wall -I$(RAYLIB_SRC) -Iinclude
+
+ifeq ($(BUILD_MODE),DEBUG)
+	CFLAGS += -g -O0 -DDEBUG
+else
+	CFLAGS += -O2 -DRELEASE
+endif
+
 FRAMEWORKS = -framework CoreVideo -framework IOKit \
              -framework Cocoa -framework GLUT -framework OpenGL
 
