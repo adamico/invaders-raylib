@@ -5,21 +5,6 @@
 
 #define MAX_PROJECTILES 100
 #define MAX_ENEMIES 55
-#define MAX_ENEMIES_PER_ROW 11
-#define COL_PADDING 80
-#define ROW_PADDING 60
-#define ENEMY_SPEED 50.0f
-#define ENEMY_RADIUS 15.0f
-#define PLAYER_HEALTH 5
-#define PLAYER_RADIUS 12.5f
-
-#define FOR_EACH_PROJECTILE(projectilePtr, projectileArray)                    \
-  for (Projectile *projectilePtr = projectileArray;                            \
-       projectilePtr < projectileArray + MAX_PROJECTILES; projectilePtr++)
-
-#define FOR_EACH_ENEMY(enemyPtr, enemyArray)                                   \
-  for (Enemy *enemyPtr = enemyArray; enemyPtr < enemyArray + MAX_ENEMIES;      \
-       enemyPtr++)
 
 extern const Vector2 windowSize;
 
@@ -29,7 +14,6 @@ typedef enum GameScene { TITLE, GAMEPLAY, GAMEOVER } GameScene;
 typedef struct Player {
   Vector2 pos;
   float radius;
-  Color color;
   float speed;
   Vector2 dir;
   int health;
@@ -49,7 +33,6 @@ typedef struct Enemy {
   Vector2 pos;
   float radius;
   bool active;
-  Color color;
 } Enemy;
 
 typedef struct GameResources {

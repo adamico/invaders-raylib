@@ -3,6 +3,9 @@
 #include "game.h"
 #include "scene_title.h"
 
+#define TITLE_TEXT "Invaders RL"
+#define SUBTITLE_TEXT "Press Space to Start"
+
 void CenterText(const char *text, int yPos, int fontSize, Color textColor) {
   int textSize = MeasureText(text, fontSize);
   DrawText(text, (int)windowSize.x / 2 - textSize / 2, yPos, fontSize,
@@ -17,7 +20,7 @@ void UpdateTitle(GameState *state) {
 void DrawTitle(GameState *state) {
   BeginDrawing();
   ClearBackground(BLACK);
-  CenterText("Invaders RL", windowSize.y / 2, 40, WHITE);
-  CenterText("Press Space to Start", windowSize.y / 2 + 100, 20, WHITE);
+  CenterText(TITLE_TEXT, windowSize.y / 2, 40, WHITE);
+  CenterText(SUBTITLE_TEXT, windowSize.y / 2 + 100, 20, WHITE);
   EndDrawing();
 }

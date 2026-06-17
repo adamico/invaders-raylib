@@ -1,33 +1,53 @@
-#include "game.h"
-#include "raylib.h"
-#include "raymath.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include "raylib.h"
+#include "raymath.h"
 
+#include "game.h"
 #include "scene_gameplay.h"
 
-const int canvas_size = 50;
-const Vector2 canvas_offset = {-canvas_size / 2.0, -canvas_size / 2.0};
+#define CANVAS_SIZE 50
+
+#define CANVAS_OFFSET (Vector2){-CANVAS_SIZE / 2.0, -CANVAS_SIZE / 2.0}
+
+#define PLAYER_RADIUS 12.5f
+#define PLAYER_SPEED 300.0f
+#define PLAYER_HEALTH 5
+#define INITIAL_PLAYER_POS                                                     \
+  (Vector2) { windowSize.x / 2, windowSize.y - (PLAYER_RADIUS * 4) }
+
+#define MAX_ENEMIES_PER_ROW 11
+#define COL_PADDING 80
+#define ROW_PADDING 60
+#define ENEMY_SPEED 50.0f
+#define ENEMY_RADIUS 15.0f
+#define START_GRID_POS                                                         \
+  (Vector2){((windowSize.x - (MAX_ENEMIES_PER_ROW * COL_PADDING)) / 2) +       \
+                (COL_PADDING / 2.0),                                           \
+            100}
+
+#define FOR_EACH_PROJECTILE(projectilePtr, projectileArray)                    \
+  for (Projectile *projectilePtr = projectileArray;                            \
+       projectilePtr < projectileArray + MAX_PROJECTILES; projectilePtr++)
+
+#define FOR_EACH_ENEMY(enemyPtr, enemyArray)                                   \
+  for (Enemy *enemyPtr = enemyArray; enemyPtr < enemyArray + MAX_ENEMIES;      \
+       enemyPtr++)
 
 void InitPlayer(GameState *state) {
-  state->player =
-      (Player){.pos = {windowSize.x / 2, windowSize.y - (PLAYER_RADIUS * 4)},
-               .radius = PLAYER_RADIUS,
-               .speed = 300.0f,
-               .dir = {0.0f, 0.0f},
-               .health = PLAYER_HEALTH};
+  state->player = (Player){.pos = INITIAL_PLAYER_POS,
+                           .radius = PLAYER_RADIUS,
+                           .speed = PLAYER_SPEED,
+                           .dir = {0.0f, 0.0f},
+                           .health = PLAYER_HEALTH};
 }
 
 void InitEnemies(GameState *state) {
-  Vector2 startGridPos = {
-      ((windowSize.x - (MAX_ENEMIES_PER_ROW * COL_PADDING)) / 2) +
-          (COL_PADDING / 2.0),
-      100};
   for (int enemyIndex = 0; enemyIndex < MAX_ENEMIES; enemyIndex++) {
     int column = enemyIndex % MAX_ENEMIES_PER_ROW;
     int row = enemyIndex / MAX_ENEMIES_PER_ROW;
-    int offsetX = startGridPos.x;
-    int offsetY = startGridPos.y;
+    int offsetX = START_GRID_POS.x;
+    int offsetY = START_GRID_POS.y;
     Enemy enemy = {.pos = (Vector2){offsetX + (column * COL_PADDING),
                                     offsetY + (row * ROW_PADDING)},
                    .radius = ENEMY_RADIUS,
@@ -73,7 +93,7 @@ void UpdatePlayer(GameState *state, float dt) {
 };
 
 void DrawOffset(Texture2D texture, Vector2 pos, Color tint) {
-  Vector2 drawPos = Vector2Add(pos, canvas_offset);
+  Vector2 drawPos = Vector2Add(pos, CANVAS_OFFSET);
   DrawTextureV(texture, drawPos, tint);
 }
 
